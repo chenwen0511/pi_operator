@@ -193,12 +193,11 @@ def create_sinusoidal_pos_embedding(time, dimension, min_period, max_period):
 
 | 组件 | 参数量 | 占比 |
 |------|--------|------|
-| SigLIP (vision) | ~400M | ~14% |
-| Gemma 2B (language) | ~2B | ~69% |
-| Gemma 300M (expert) | ~300M | ~10% |
-| 动作头 | ~50M | ~2% |
-| 其他投影 | ~10M | ~1% |
-| **总计** | **~2.8B** | 100% |
+| SigLIP (vision) | ~400M | ~10% |
+| Gemma 2B (language) | ~2.5B | ~60% |
+| Gemma 300M (expert) | ~700M | ~17% |
+| 动作头 | ~2M | ~0.05% |
+| **总计** | **~4.14B** | 100% |
 
 ### 6.2 模型文件
 
@@ -212,7 +211,71 @@ pi05_libero/
 
 ---
 
-## 7. 常见 LLM 算子对比
+## 7. 完整模型结构 (4.14B 参数)
+
+```
+pi05: PI05Pytorch (4143.4M)
+  paligemma_with_expert: PaliGemmaWithExpertModel (4141.2M)
+    paligemma: PaliGemmaForConditionalGenerationWithPiGemma (3450.0M)
+      model: PaliGemmaModelWithPiGemma (2923.3M)
+        vision_tower: SiglipVisionModel (412.4M)
+          vision_model: SiglipVisionTransformer (412.4M)
+            embeddings: SiglipVisionEmbeddings (1.0M)
+              patch_embedding: Conv2d (0.7M)
+              position_embedding: Embedding (0.3M)
+            encoder: SiglipEncoder (411.5M)
+              layers: ModuleList (26层, 每层15.2M)
+                SiglipEncoderLayer:
+                  layer_norm1: LayerNorm
+                  self_attn: SiglipAttention (5.3M)
+                    k_proj, q_proj, v_proj, out_proj: Linear
+                  mlp: SiglipMLP (9.9M)
+                    fc1, fc2: Linear
+            post_layernorm: LayerNorm
+        multi_modal_projector: PaliGemmaMultiModalProjector (2.4M)
+        language_model: PiGemmaModel (2508.5M)
+          embed_tokens: Embedding (526.6M)
+          layers: ModuleList (18层, 每层110.1M)
+            _PiGemmaDecoderLayerBase:
+              self_attn: GemmaAttention (9.4M)
+                q_proj: Linear (4.2M), k_proj: Linear (0.5M)
+                v_proj: Linear (0.5M), o_proj: Linear (4.2M)
+              mlp: GemmaMLP (100.7M)
+                gate_proj, up_proj, down_proj: Linear (各33.6M)
+              input_layernorm: PiGemmaRMSNorm
+              post_attention_layernorm: PiGemmaRMSNorm
+          norm: PiGemmaRMSNorm
+          rotary_emb: GemmaRotaryEmbedding
+          lm_head: Linear (526.6M)
+    gemma_expert: PiGemmaForCausalLM (691.3M)
+      model: PiGemmaModel (427.9M)
+        layers: ModuleList (18层, 每层23.6M)
+          _PiGemmaDecoderLayerBase:
+            self_attn: GemmaAttention (4.7M)
+            mlp: GemmaMLP (12.6M)
+            input_layernorm: PiGemmaRMSNorm (AdaRMS, 3.1M)
+            post_attention_layernorm: PiGemmaRMSNorm (AdaRMS, 3.1M)
+        norm: PiGemmaRMSNorm (3.1M)
+        rotary_emb: GemmaRotaryEmbedding
+        lm_head: Linear (263.3M)
+  action_in_proj: Linear (32→1024)
+  action_out_proj: Linear (1024→32)
+  time_mlp_in: Linear (1024→1024)
+  time_mlp_out: Linear (1024→1024)
+```
+
+### 7.1 核心算子详解
+
+| 模块 | 层数 | 每层参数量 | 总参数量 | 关键算子 |
+|------|------|-----------|---------|----------|
+| SigLIP Vision | 26 | 15.2M | 412.4M | Conv2d, Attention, MLP |
+| Gemma Language | 18 | 110.1M | 2508.5M | Attention, MLP, RMSNorm |
+| Gemma Expert | 18 | 23.6M | 691.3M | Attention, MLP, AdaRMS |
+| Action Head | - | - | ~2M | Linear |
+
+---
+
+## 8. 常见 LLM 算子对比
 
 ### 7.1 标准 LLM 算子
 
@@ -225,7 +288,7 @@ pi05_libero/
 | RoPE | 位置编码 | 无参数 |
 | LM Head | 词表预测 | V × d |
 
-### 7.2 π0.5 特有算子
+### 8.2 π0.5 特有算子
 
 | 算子 | 功能 | 说明 |
 |------|------|------|
@@ -236,7 +299,7 @@ pi05_libero/
 
 ---
 
-## 8. 参考资料
+## 9. 参考资料
 
 - 模型代码: `/home/ubuntu/stephen/01-code/lerobot/src/lerobot/policies/pi05/`
 - 配置文件: `/home/ubuntu/stephen/01-code/lerobot/src/lerobot/policies/pi05/configuration_pi05.py`

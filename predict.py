@@ -16,6 +16,8 @@ def load_model(model_path="/home/ubuntu/stephen/02-weight/pi05_libero"):
     print(f"Using device: {device}")
 
     policy = PI05Policy.from_pretrained(model_path).to(device).eval()
+    print("policy: ")
+    print(policy)
     print("Model loaded successfully!")
 
     # 使用本地 paligemma tokenizer
