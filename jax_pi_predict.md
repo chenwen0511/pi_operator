@@ -33,6 +33,20 @@ gcloud auth application-default login
 ```
 
 ### 下载权重
+
+**方式 1：ModelScope（推荐国内用户）**
+```bash
+# 安装 modelscope
+pip install modelscope
+
+# 下载 pi05_base 模型
+modelscope download --model hairuoliu/pi05_base --local_dir /home/ubuntu/stephen/02-weight/pi05_base
+
+# 查看下载的权重
+ls -lh /home/ubuntu/stephen/02-weight/pi05_base/
+```
+
+**方式 2：GCS（需要 Google Cloud SDK）**
 ```bash
 # 创建权重目录
 mkdir -p /home/ubuntu/stephen/02-weight/pi05_libero_jax
