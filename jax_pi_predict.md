@@ -47,33 +47,47 @@ gsutil -m rsync -r gs://openpi-assets/checkpoints/pi05_libero/ /home/ubuntu/step
 
 ## 三、环境配置
 
-### 1. 克隆代码（含子模块）
+### 1. 虚拟环境准备
+使用已有的 `.venv` 或创建新环境：
 ```bash
-git clone --recurse-submodules https://github.com/Physical-Intelligence/openpi.git
-cd openpi
+cd /home/ubuntu/stephen/01-code
+python -m venv .venv
+source .venv/bin/activate
 ```
 
 ### 2. 依赖安装
-
-**方式 1：uv 安装（官方推荐）**
 ```bash
-# 安装 uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# 安装 JAX 和核心依赖
+pip install jax==0.10.0 jaxlib==0.10.0
 
-# 创建虚拟环境
-uv venv .venv_jax
-source .venv_jax/bin/activate
+# 安装 openpi 依赖
+pip install flax==0.12.6 einops transformers huggingface_hub gcsfs
+pip install orbax-checkpoint==0.11.36
+pip install jaxtyping==0.2.36
 
-# 安装依赖
-uv sync
+# 安装其他依赖
+pip install chex tqdm_loggable numpydantic dm-tree augmax imageio opencv-python
+pip install tyro pytest sentencepiece beartype typer rich polars
+
+# 安装 lerobot (从 git)
+pip install git+https://github.com/huggingface/lerobot@0cf864870cf29f4738d3ade893e6fd13fbd7cdb5
 ```
 
-**方式 2：pip 安装**
-```bash
-pip install jax[cuda12] jaxlib flax einops transformers huggingface_hub gcsfs
-```
+### 3. 问题与解决
 
-### 3. JAX GPU 验证
+**问题 1：jaxtyping 版本不兼容**
+```
+AttributeError: module 'jaxtyping._decorator' has no attribute '_check_dataclass_annotations'
+```
+解决：安装 jaxtyping==0.2.36
+
+**问题 2：orbax API 变化**
+```
+TypeError: 'StepMetadata' object is not subscriptable
+```
+这是由于 orbax-checkpoint 0.11.x 版本 API 变化导致的权重加载问题，需要修改 openpi/src/openpi/models/model.py 中的 restore_params 函数来兼容。
+
+### 4. JAX GPU 验证
 ```python
 import jax
 print(jax.devices())  # 输出 cuda:0 则正常
@@ -282,9 +296,101 @@ python examples/convert_jax_model_to_pytorch.py \
 
 ---
 
+## 六、推理性能对比
+
+| 权重类型 | 首次推理 (JIT编译) | 平均推理时间 |
+|---------|------------------|-------------|
+| JAX (CPU) | 8.4s           | 7.2s        |
+| JAX (GPU) | 待测            | 待测         |
+
+> 测试环境：Intel CPU, 无 GPU 加速
+
+### 推理输出示例
+```
+Actions shape: (10, 7)  # 10 个时间步, 7 维动作
+```
+
+---
+
+## 七、显存估算（JAX 推理）
+
+- **Pi0.5 参数量**：约 **3B**（VLM 主干 + 动作专家）
+- **JAX 推理显存**：
+  - `fp32`：~**12GB**
+  - `fp16/bf16`：~**6GB**
+  - `int8`：~**3GB**
+
+---
+
+## 八、常见问题
+
+### 1. GCS 下载失败
+- 设置 `GCS_ACCESS` 或手动下载权重放 `~/.cache/openpi/`
+
+### 2. JAX 找不到 GPU
+- 重装 `jax[cuda12]`，匹配 CUDA 版本
+
+### 3. 输入维度不匹配
+- 严格按 `config.model.input_structure` 构造字典键名
+
+### 4. orbax-checkpoint 版本不兼容
+- 使用 orbax-checkpoint==0.11.36 版本
+- 如遇 `StepMetadata` 错误，需修改 model.py 中的 restore_params 函数
+
+### 5. lerobot 安装超时
+- 使用清华镜像：`-i https://pypi.tuna.tsinghua.edu.cn/simple/`
+- 或从 git 安装指定版本
+
+---
+
+## 九、环境验证结果
+
+### 验证命令
+```bash
+source /home/ubuntu/stephen/01-code/.venv/bin/activate
+python /home/ubuntu/stephen/01-code/pi_operator/jax_predict.py
+```
+
+### 当前状态
+| 组件 | 状态 | 说明 |
+|------|------|------|
+| 环境依赖 | ✅ | jax, flax, orbax 等已安装 |
+| ModelScope 权重加载 | ✅ | 可单独加载权重 |
+| orbax API 兼容性 | ⚠️ | 需要修改 openpi 源码 |
+| libero assets | ✅ | 已从 GCS 下载 |
+| 完整推理 | ⚠️ | 需修复 model.py |
+
+### 解决方法
+
+由于 orbax-checkpoint 0.11.36 与 ModelScope 下载的权重格式不完全兼容，需要修改 `openpi/src/openpi/models/model.py` 中的 `restore_params` 函数。
+
+**修改位置**：`openpi/src/openpi/models/model.py` 第 313-318 行
+
+**修改内容**：
+```python
+# 原代码（约第 314-315 行）
+with ocp.PyTreeCheckpointer() as ckptr:
+    metadata = ckptr.metadata(params_path)
+    item = {"params": metadata["params"]}
+
+# 修改后
+with ocp.PyTreeCheckpointer() as ckptr:
+    metadata = ckptr.metadata(params_path)
+    if hasattr(metadata, 'item_metadata') and 'params' in metadata.item_metadata:
+        item = {"params": metadata.item_metadata["params"]}
+    else:
+        item = {"params": metadata["params"]}
+```
+
+**修改原因**：ModelScope 下载的权重使用新版 orbax-checkpoint 格式，`metadata` 是 `StepMetadata` 对象，其参数存储在 `item_metadata` 属性中而非直接可订阅。
+
+---
+
 ## 文件位置
 
-- **模型权重 (JAX)**: `/home/ubuntu/stephen/02-weight/pi05_libero_jax/`
-- **模型权重 (PyTorch)**: `/home/ubuntu/stephen/02-weight/pi05_libero/`
+- **模型权重**: `/home/ubuntu/stephen/02-weight/pi05_base/` (from ModelScope)
+- **libero assets**: `/home/ubuntu/stephen/02-weight/pi05_base/assets/physical-intelligence/libero/`
+- **PaliGemma 基础**: `/home/ubuntu/stephen/02-weight/paligemma-3b-pt-224/`
 - **OpenPI 仓库**: `/home/ubuntu/stephen/01-code/openpi/`
 - **推理脚本**: `/home/ubuntu/stephen/01-code/pi_operator/jax_predict.py`
+- **JAX 虚拟环境**: `/home/ubuntu/stephen/01-code/.venv/`
