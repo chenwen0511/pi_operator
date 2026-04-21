@@ -54,8 +54,56 @@ else:
     item = {"params": metadata["params"]}
 ```
 
+## GPU 推理配置
+
+### 1. 检查 GPU 和 CUDA 环境
+
+```bash
+# 查看 GPU
+nvidia-smi
+
+# 查看 CUDA 版本
+nvidia-smi | grep "CUDA Version"
+# 输出: CUDA Version: 13.1
+```
+
+### 2. 安装 CUDA 运行时库
+
+系统有 NVIDIA 驱动但缺少 CUDA 运行时库，需要安装：
+
+```bash
+# 方式1: 安装 CUDA Toolkit
+sudo apt install cuda-toolkit-12-8
+
+# 方式2: 下载安装
+wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda_12.8.0_565.77_linux.run
+sudo ./cuda_12.8.0_565.77_linux.run
+```
+
+### 3. 安装 JAX GPU 版本
+
+```bash
+# 安装 CUDA 版本的 JAX
+pip install jax[cuda12]==0.10.0 --force-reinstall
+```
+
+### 4. 设置环境变量
+
+```bash
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+export CUDA_HOME=/usr/local/cuda
+```
+
+### 5. 验证 GPU 可用
+
+```bash
+python -c "import jax; print(jax.devices())"
+# 期望输出: [cuda(id=0)]
+```
+
 ## 推理结果
 
+### CPU 模式
 ```
 ============================================================
 pi0.5 VLA Model Inference
@@ -63,6 +111,7 @@ Using ModelScope weights + libero assets
 ============================================================
 
 Loading from: /home/ubuntu/stephen/02-weight/pi05_base
+WARNING:jax._src.xla_bridge:An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
 JAX devices: [CpuDevice(id=0)]
 Config: pi05_libero
 Model: Pi0Config(...)
@@ -71,14 +120,60 @@ Example keys: dict_keys(['observation/state', 'observation/image', 'observation/
 
 Running 10 inferences...
 First (with JIT)...
-  First: 8.415s, actions: (10, 7)
-  Avg: 7.234s, min: 6.911s, max: 7.410s
+  First: 8.308s, actions: (10, 7)
+  Avg: 7.147s, min: 6.964s, max: 7.249s
 
 ============================================================
 SUCCESS!
-  First run: 8.415s
-  Average: 7.234s
+  First run: 8.308s
+  Average: 7.147s
 ============================================================
+```
+
+### GPU 模式（预期）
+```
+JAX devices: [cuda(id=0)]
+# 首次推理: ~2-3s
+# 平均推理: ~1s
+```
+
+## 性能对比
+
+| 模式 | 首次推理 | 平均推理 | 加速比 |
+|------|---------|---------|-------|
+| CPU | 8.3s | 7.1s | 1x |
+| GPU | ~2-3s | ~1s | 5-7x |
+
+## 常见问题
+
+### 问题1: JAX 找不到 GPU
+
+**错误信息:**
+```
+WARNING: An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+JAX devices: [CpuDevice(id=0)]
+```
+
+**解决:**
+1. 确认安装 CUDA 版本 JAX: `pip install jax[cuda12]`
+2. 确认 CUDA 运行时库已安装
+3. 设置环境变量: `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH`
+
+### 问题2: CUDA 版本不匹配
+
+**解决:**
+确保 jax[cuda12] 版本与系统 CUDA 驱动兼容
+
+### 问题3: jaxtyping 版本不兼容
+
+**错误信息:**
+```
+AttributeError: module 'jaxtyping._decorator' has no attribute '_check_dataclass_annotations'
+```
+
+**解决:**
+```bash
+pip install jaxtyping==0.2.36
 ```
 
 ## 文件位置
