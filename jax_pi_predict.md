@@ -56,34 +56,43 @@ else:
 
 ## GPU 推理配置
 
+### 前置条件
+
+GPU 推理需要以下条件：
+1. NVIDIA  GPU 卡
+2. NVIDIA 驱动（已安装）
+3. **CUDA 运行时库**（需额外安装）
+4. CUDA 驱动版本 >= 12.1
+
 ### 1. 检查 GPU 和 CUDA 环境
 
 ```bash
 # 查看 GPU
 nvidia-smi
 
-# 查看 CUDA 版本
-nvidia-smi | grep "CUDA Version"
-# 输出: CUDA Version: 13.1
+# 查看是否有 CUDA 运行时库
+ls /usr/local/cuda/lib64/libcudart.so* 2>/dev/null
+# 如果没有输出，说明需要安装 CUDA
 ```
 
-### 2. 安装 CUDA 运行时库
+### 2. 安装 CUDA 运行时库（必须）
 
-系统有 NVIDIA 驱动但缺少 CUDA 运行时库，需要安装：
-
+**方式1: apt 安装（推荐）**
 ```bash
-# 方式1: 安装 CUDA Toolkit
+sudo apt update
 sudo apt install cuda-toolkit-12-8
+```
 
-# 方式2: 下载安装
+**方式2: 下载 CUDA Installer**
+```bash
 wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda_12.8.0_565.77_linux.run
 sudo ./cuda_12.8.0_565.77_linux.run
+# 只选择 "CUDA Toolkit" 即可，不需要 driver
 ```
 
 ### 3. 安装 JAX GPU 版本
 
 ```bash
-# 安装 CUDA 版本的 JAX
 pip install jax[cuda12]==0.10.0 --force-reinstall
 ```
 
@@ -99,6 +108,12 @@ export CUDA_HOME=/usr/local/cuda
 ```bash
 python -c "import jax; print(jax.devices())"
 # 期望输出: [cuda(id=0)]
+```
+
+### 6. 运行推理
+
+```bash
+python /home/ubuntu/stephen/01-code/pi_operator/jax_predict.py
 ```
 
 ## 推理结果
@@ -154,12 +169,30 @@ WARNING: An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib
 JAX devices: [CpuDevice(id=0)]
 ```
 
-**解决:**
+**排查步骤:**
 1. 确认安装 CUDA 版本 JAX: `pip install jax[cuda12]`
-2. 确认 CUDA 运行时库已安装
+2. **确认 CUDA 运行时库已安装**:
+   ```bash
+   ls /usr/local/cuda/lib64/libcudart.so*
+   ```
+   如果没有输出，需要安装 CUDA Toolkit
 3. 设置环境变量: `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH`
+4. 验证: `python -c "import jax; print(jax.devices())"`
 
-### 问题2: CUDA 版本不匹配
+### 问题2: CUDA 运行时库不存在
+
+**错误信息:**
+```
+RuntimeError: jaxlib/cuda/versions_helpers.cc:135: operation cuInit(0) failed: CUDA_ERROR_UNKNOWN
+```
+
+**解决:**
+这是因为系统只有 NVIDIA 驱动，没有 CUDA 运行时库。必须安装 CUDA Toolkit：
+```bash
+sudo apt install cuda-toolkit-12-8
+```
+
+### 问题3: CUDA 版本不匹配
 
 **解决:**
 确保 jax[cuda12] 版本与系统 CUDA 驱动兼容
