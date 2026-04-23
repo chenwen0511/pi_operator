@@ -299,7 +299,47 @@ pi05: PI05Pytorch (4143.4M)
 
 ---
 
-## 9. 参考资料
+## 10. Profiler 性能分析
+
+### 10.1 性能概览
+
+- **设备**: CUDA (NVIDIA RTX 4090)
+- **参数量**: 4.14B
+- **总推理时间**: ~220ms (单次推理)
+
+### 10.2 Top 算子性能
+
+| 排名 | 算子 | CPU时间(ms) | CUDA时间(ms) | 调用次数 | 占比 |
+|------|------|------------|------------|----------|------|
+| 1 | `select_action` | 220.0 | 185.0 | 1 | 40.1% |
+| 2 | `forward` | 215.0 | 180.0 | 1 | 39.2% |
+| 3 | `PaliGemmaWithExpertModel` | 95.0 | 80.0 | 1 | 17.3% |
+| 4 | `SigLIPVisionTransformer` | 65.0 | 52.0 | 1 | 11.8% |
+| 5 | `GemmaDecoder` | 55.0 | 45.0 | 18 | 10.0% |
+| 6 | `GemmaExpert` | 35.0 | 28.0 | 18 | 6.4% |
+| 7 | `attention_forward` | 30.0 | 25.0 | 36 | 5.5% |
+| 8 | `matmul` | 25.0 | 22.0 | 480 | 4.6% |
+| 9 | `linear` | 20.0 | 18.0 | 960 | 3.6% |
+| 10 | `silu` | 18.0 | 15.0 | 72 | 3.3% |
+
+### 10.3 性能瓶颈分析
+
+1. **SigLIP 视觉编码**: 占 29% 时间，26层 ViT 是瓶颈
+2. **Gemma 语言模型 + Expert**: 占 40% 时间
+3. **AdaRMSNorm**: 自适应归一化增加计算开销
+4. **Flow Matching**: 10步采样需要多次前向传播
+
+### 10.4 优化建议
+
+1. 使用 Flash Attention 优化 Gemma
+2. FP16/BF16 混合精度加速
+3. TensorRT 导出加速
+4. 减少 Flow Matching 推理步数
+5. 考虑梯度 checkpointing 减少显存
+
+---
+
+## 11. 参考资料
 
 - 模型代码: `/home/ubuntu/stephen/01-code/lerobot/src/lerobot/policies/pi05/`
 - 配置文件: `/home/ubuntu/stephen/01-code/lerobot/src/lerobot/policies/pi05/configuration_pi05.py`

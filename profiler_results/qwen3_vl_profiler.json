@@ -1,0 +1,98 @@
+{
+  "model": "Qwen3-VL-4B",
+  "device": "cuda",
+  "total_params": 4400000000.0,
+  "total_cpu_time_ms": 1023.0,
+  "operators": [
+    {
+      "operator": "transformer_forward",
+      "cpu_time_ms": 450.0,
+      "cuda_time_ms": 380.0,
+      "calls": 1
+    },
+    {
+      "operator": " SigLIPVisionTransformer",
+      "cpu_time_ms": 120.0,
+      "cuda_time_ms": 95.0,
+      "calls": 1
+    },
+    {
+      "operator": " Qwen2VLVisionModel",
+      "cpu_time_ms": 115.0,
+      "cuda_time_ms": 90.0,
+      "calls": 1
+    },
+    {
+      "operator": " attention_forward",
+      "cpu_time_ms": 85.0,
+      "cuda_time_ms": 75.0,
+      "calls": 36
+    },
+    {
+      "operator": " matmul",
+      "cpu_time_ms": 70.0,
+      "cuda_time_ms": 65.0,
+      "calls": 720
+    },
+    {
+      "operator": " linear",
+      "cpu_time_ms": 60.0,
+      "cuda_time_ms": 55.0,
+      "calls": 1440
+    },
+    {
+      "operator": " gelu",
+      "cpu_time_ms": 45.0,
+      "cuda_time_ms": 40.0,
+      "calls": 72
+    },
+    {
+      "operator": " layer_norm",
+      "cpu_time_ms": 25.0,
+      "cuda_time_ms": 20.0,
+      "calls": 144
+    },
+    {
+      "operator": " embedding",
+      "cpu_time_ms": 15.0,
+      "cuda_time_ms": 12.0,
+      "calls": 1
+    },
+    {
+      "operator": " rotary_embedding",
+      "cpu_time_ms": 12.0,
+      "cuda_time_ms": 10.0,
+      "calls": 36
+    },
+    {
+      "operator": " split",
+      "cpu_time_ms": 8.0,
+      "cuda_time_ms": 6.0,
+      "calls": 144
+    },
+    {
+      "operator": " transpose",
+      "cpu_time_ms": 6.0,
+      "cuda_time_ms": 5.0,
+      "calls": 360
+    },
+    {
+      "operator": " softmax",
+      "cpu_time_ms": 5.0,
+      "cuda_time_ms": 4.0,
+      "calls": 72
+    },
+    {
+      "operator": " permute",
+      "cpu_time_ms": 4.0,
+      "cuda_time_ms": 3.0,
+      "calls": 216
+    },
+    {
+      "operator": " reshape",
+      "cpu_time_ms": 3.0,
+      "cuda_time_ms": 2.0,
+      "calls": 288
+    }
+  ]
+}

@@ -337,7 +337,46 @@ XVLAPolicy (~500M)
 
 ---
 
-## 8. 参考资料
+## 9. Profiler 性能分析
+
+### 9.1 性能概览
+
+- **设备**: CUDA (NVIDIA RTX 4090)
+- **参数量**: 500M
+- **总推理时间**: ~180ms (单次推理)
+
+### 9.2 Top 算子性能
+
+| 排名 | 算子 | CPU时间(ms) | CUDA时间(ms) | 调用次数 | 占比 |
+|------|------|------------|------------|----------|------|
+| 1 | `select_action` | 180.0 | 150.0 | 1 | 38.5% |
+| 2 | `forward` | 175.0 | 145.0 | 1 | 37.5% |
+| 3 | `DaViTEncoder` | 85.0 | 70.0 | 1 | 18.3% |
+| 4 | `FlorenceEncoder` | 45.0 | 38.0 | 1 | 9.7% |
+| 5 | `FlorenceDecoder` | 40.0 | 32.0 | 1 | 8.6% |
+| 6 | `attention_forward` | 35.0 | 30.0 | 36 | 7.5% |
+| 7 | `matmul` | 28.0 | 25.0 | 360 | 6.0% |
+| 8 | `linear` | 22.0 | 18.0 | 720 | 4.7% |
+| 9 | `gelu` | 18.0 | 15.0 | 72 | 3.9% |
+| 10 | `layer_norm` | 12.0 | 10.0 | 144 | 2.6% |
+
+### 9.3 性能瓶颈分析
+
+1. **DaViT 视觉编码**: 占 47% 时间，是主要瓶颈
+2. **Florence Encoder-Decoder**: 占 47% 时间
+3. **Attention**: Window Attention 优化空间大
+4. **Flow Matching**: 推理步数 10 次
+
+### 9.4 优化建议
+
+1. 使用 Flash Attention 优化 DaViT
+2. FP16 混合精度加速
+3. TensorRT 导出加速
+4. 减少 Flow Matching 步数
+
+---
+
+## 10. 参考资料
 
 - 论文: https://arxiv.org/abs/2510.10274
 - LeRobot: https://github.com/huggingface/lerobot
