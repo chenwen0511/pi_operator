@@ -1,130 +1,68 @@
-# π0.5 VLA Model Operators
+# 模型算子与结构分析项目
 
-本仓库包含 π0.5 (PI05) 视觉语言动作模型的算子分析和推理代码，基于 [LeRobot](https://github.com/huggingface/lerobot) 框架。
+本项目用于对不同模型进行**算子级**与**模型结构级**分析拆解，目标是把各模型的核心组件、推理流程与实现细节梳理清楚，形成可复用的分析与验证方法。
 
-## 模型概述
+## 项目定位
 
-π0.5 是 Physical Intelligence 开发的 VLA (Vision-Language-Action) 模型，通过异构数据联合训练实现开放世界泛化能力。
+- 面向多模型：同一仓库内对多个模型进行并行分析
+- 面向算子：关注关键算子的功能、输入输出与实现路径
+- 面向结构：梳理模型主干结构、模块关系与执行流程
+- 面向落地：保留可运行脚本，便于复现、验证与对比
 
-- **论文**: [π0.5: A Vision-Language-Action Model with Open-World Generalization](https://arxiv.org/abs/2504.16054)
-- **官方开源**: [Physical-Intelligence/openpi](https://github.com/Physical-Intelligence/openpi)
-- **框架**: [LeRobot](https://github.com/huggingface/lerobot)
+## 目录组织
 
-## 核心算子
+项目已按不同模型拆分目录，每个目录独立维护对应模型的分析与实验内容：
 
-| 算子 | 功能 | 说明 |
-|------|------|------|
-| **SigLIP Vision** | 视觉编码器 | 处理相机图像输入 (~400M参数) |
-| **Gemma Language** | 语言编码器 | 处理文本指令 (~2B参数) |
-| **Flow Matching** | 动作生成 | 基于连续动作预测 |
-| **PiGemmaRMSNorm** | 自适应归一化 | 条件 RMSNorm |
+- `pi_jax/`：PI 系列（JAX 方向）相关分析与代码
+- `pi_torch/`：PI 系列（PyTorch 方向）相关分析与代码
+- `qwen/`：Qwen 系列模型算子与结构分析
+- `xvla/`：XVLA 模型算子与结构分析
 
-详见 [PI_Operator_report.md](./PI_Operator_report.md)
+## 本工程目录结构说明
 
-## 环境准备
-
-### 1. 安装依赖
-
-```bash
-# 克隆 LeRobot
-git clone https://github.com/huggingface/lerobot.git
-cd lerobot
-pip install -e . --no-deps
-pip install torch transformers safetensors gymnasium -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-### 2. 下载模型
-
-```bash
-# 下载 π0.5 模型 (需要申请访问权限)
-modelscope download --model lerobot/pi05_libero --local_dir /path/to/pi05_libero/
-
-# 下载 Paligemma Tokenizer (用于本地)
-modelscope download --model AI-ModelScope/paligemma-3b-pt-224 --local_dir /path/to/paligemma-3b-pt-224/
-```
-
-## 使用方法
-
-### 推理示例
-
-```python
-import torch
-from lerobot.policies.pi05 import PI05Policy
-from lerobot.policies.factory import make_pre_post_processors
-
-# 模型路径
-model_path = "/your/path/to/pi05_libero"
-tokenizer_path = "/your/path/to/paligemma-3b-pt-224"
-
-# 加载模型
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-policy = PI05Policy.from_pretrained(model_path).to(device).eval()
-
-# 创建预处理器
-preprocess, postprocess = make_pre_post_processors(
-    policy.config,
-    model_path,
-    preprocessor_overrides={
-        "device_processor": {"device": str(device)},
-        "tokenizer_processor": {"tokenizer_name": tokenizer_path},
-    },
-)
-
-# 准备输入
-example = {
-    "observation.images.image": torch.randn(3, 256, 256),
-    "observation.images.image2": torch.randn(3, 256, 256),
-    "observation.state": torch.randn(8),
-    "task": "pick up the object",
-}
-
-# 推理
-batch = preprocess(example)
-batch = {k: v.to(device) for k, v in batch.items() if hasattr(v, 'to')}
-
-with torch.inference_mode():
-    action = policy.select_action(batch)
-    action = postprocess(action)
-
-print(f"Action: {action.shape}")  # (1, 7)
-```
-
-### 使用本仓库脚本
-
-```bash
-# 修改 predict.py 中的模型路径后运行
-python predict.py
-```
-
-## 项目结构
-
-```
+```text
 pi_operator/
-├── predict.py              # 推理脚本
-├── PI_Operator_report.md # 算子详细报告
-└── README.md            # 本文件
+├── README.md                 # 项目总览与导航
+├── torchinfo_analysis.py     # 通用模型结构统计/分析脚本
+├── pi_jax/                   # PI(JAX) 模型分析目录
+│   ├── jax_pi_predict.md
+│   └── jax_predict.py
+├── pi_torch/                 # PI(PyTorch) 模型分析目录
+│   ├── README_PI_TORCH.md
+│   ├── PI_Operator_report.md
+│   ├── PI_Operator_report.pdf
+│   ├── pi05_structure.txt
+│   └── predict.py
+├── qwen/                     # Qwen 模型分析目录
+│   ├── Qwen_VL_4B_Operator.md
+│   ├── Qwen_VL_4B_Operator.pdf
+│   └── qwen_predict.py
+└── xvla/                     # XVLA 模型分析目录
+    ├── XVLA_Opeator.md
+    ├── XVLA_Opeator.pdf
+    └── xvla_predict.py
 ```
 
-## 模型文件
+说明：以上为当前仓库的实际文件结构，后续新增文件可按对应模型目录继续扩展。
 
-需要下载的模型文件：
+## 推荐目录规范
 
-| 文件 | 大小 | 说明 |
-|------|------|------|
-| `pi05_libero/` | ~13.5GB | π0.5 权重 |
-| `paligemma-3b-pt-224/` | ~11GB | 语言Tokenizer |
+为便于后续统一维护，建议各模型目录逐步保持类似结构：
 
-## 硬件要求
+- `README.md` 或模型说明文档：该模型的背景、结论与使用方式
+- `*_report.md`：算子/结构拆解报告
+- `predict.py`、`analysis.py` 等脚本：推理或分析验证代码
+- 其他辅助文件：配置、结果记录、对比实验脚本等
 
-| 模式 | 显存 | GPU |
-|------|------|-----|
-| 推理 | >8GB | RTX 4090 ✓ |
-| LoRA微调 | >22GB | RTX 4090 ✓ |
-| 全参数微调 | >70GB | A100/H100 |
+## 使用方式
 
-## 参考资料
+1. 进入目标模型目录（如 `pi_torch/`、`qwen/`）
+2. 阅读该目录文档，了解模型与分析重点
+3. 按需运行对应脚本进行推理或结构验证
+4. 将结论沉淀到该目录文档，保持模型间可横向对比
 
-- [π0.5 论文](https://arxiv.org/abs/2504.16054)
-- [OpenPI 官方仓库](https://github.com/Physical-Intelligence/openpi)
-- [LeRobot 文档](https://huggingface.co/docs/lerobot)
-- [Physical Intelligence 官网](https://www.pi.website)
+## 当前状态
+
+- 已按模型完成目录拆分
+- 各模型可在各自目录内独立迭代
+- 后续可持续补充统一模板（算子表、结构图、性能对比项）
