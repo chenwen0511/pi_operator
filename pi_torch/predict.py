@@ -9,7 +9,9 @@ from lerobot.policies.pi05 import PI05Policy
 from lerobot.policies.factory import make_pre_post_processors
 
 
-def load_model(model_path="/home/ubuntu/stephen/02-weight/pi05_libero"):
+def load_model(
+    model_path="/home/ubuntu/stephen/02-weight/pi05_libero_finetuned_v044/pi05_libero_finetuned_quantiles",
+):
     """加载模型"""
     print(f"Loading model from: {model_path}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -82,7 +84,7 @@ def main():
     print("=" * 50)
 
     # 1. 加载模型
-    model_path = "/home/ubuntu/stephen/02-weight/pi05_libero"
+    model_path = "/home/ubuntu/stephen/02-weight/pi05_libero_finetuned_v044/pi05_libero_finetuned_quantiles"
     policy, preprocess, postprocess, device = load_model(model_path)
 
     # 2. 准备输入（使用虚拟数据测试）

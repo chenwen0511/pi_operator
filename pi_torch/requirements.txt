@@ -1,0 +1,6 @@
+torch==2.10.0
+transformers==5.3.0
+lerobot==0.5.1
+numpy==2.2.6
+gymnasium==1.2.3
+safetensors==0.7.0
