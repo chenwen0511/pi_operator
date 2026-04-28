@@ -1,0 +1,98 @@
+{
+  "model": "XVLA-Folding",
+  "device": "cuda",
+  "total_params": 500000000.0,
+  "total_cpu_time_ms": 673.0,
+  "operators": [
+    {
+      "operator": "select_action",
+      "cpu_time_ms": 180.0,
+      "cuda_time_ms": 150.0,
+      "calls": 1
+    },
+    {
+      "operator": "forward",
+      "cpu_time_ms": 175.0,
+      "cuda_time_ms": 145.0,
+      "calls": 1
+    },
+    {
+      "operator": "DaViTEncoder",
+      "cpu_time_ms": 85.0,
+      "cuda_time_ms": 70.0,
+      "calls": 1
+    },
+    {
+      "operator": "FlorenceEncoder",
+      "cpu_time_ms": 45.0,
+      "cuda_time_ms": 38.0,
+      "calls": 1
+    },
+    {
+      "operator": "FlorenceDecoder",
+      "cpu_time_ms": 40.0,
+      "cuda_time_ms": 32.0,
+      "calls": 1
+    },
+    {
+      "operator": "attention_forward",
+      "cpu_time_ms": 35.0,
+      "cuda_time_ms": 30.0,
+      "calls": 36
+    },
+    {
+      "operator": "matmul",
+      "cpu_time_ms": 28.0,
+      "cuda_time_ms": 25.0,
+      "calls": 360
+    },
+    {
+      "operator": "linear",
+      "cpu_time_ms": 22.0,
+      "cuda_time_ms": 18.0,
+      "calls": 720
+    },
+    {
+      "operator": "gelu",
+      "cpu_time_ms": 18.0,
+      "cuda_time_ms": 15.0,
+      "calls": 72
+    },
+    {
+      "operator": "layer_norm",
+      "cpu_time_ms": 12.0,
+      "cuda_time_ms": 10.0,
+      "calls": 144
+    },
+    {
+      "operator": "cross_attention",
+      "cpu_time_ms": 10.0,
+      "cuda_time_ms": 8.0,
+      "calls": 12
+    },
+    {
+      "operator": "window_attention",
+      "cpu_time_ms": 8.0,
+      "cuda_time_ms": 6.0,
+      "calls": 24
+    },
+    {
+      "operator": "depthwise_conv",
+      "cpu_time_ms": 6.0,
+      "cuda_time_ms": 5.0,
+      "calls": 24
+    },
+    {
+      "operator": "embedding",
+      "cpu_time_ms": 5.0,
+      "cuda_time_ms": 4.0,
+      "calls": 1
+    },
+    {
+      "operator": "action_head",
+      "cpu_time_ms": 4.0,
+      "cuda_time_ms": 3.0,
+      "calls": 1
+    }
+  ]
+}

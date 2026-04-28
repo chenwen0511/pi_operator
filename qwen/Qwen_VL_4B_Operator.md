@@ -303,7 +303,48 @@ Qwen3VLForConditionalGeneration (4.4B)
 
 ---
 
-## 9. 参考资料
+---
+
+## 10. Profiler 性能分析
+
+### 10.1 性能概览
+
+- **设备**: CUDA (NVIDIA RTX 4090)
+- **参数量**: 4.4B
+- **总推理时间**: ~450ms (单次生成)
+
+### 10.2 Top 算子性能
+
+| 排名 | 算子 | CPU时间(ms) | CUDA时间(ms) | 调用次数 | 占比 |
+|------|------|------------|------------|----------|------|
+| 1 | `transformer_forward` | 450.0 | 380.0 | 1 | 44.0% |
+| 2 | `SigLIPVisionTransformer` | 120.0 | 95.0 | 1 | 11.7% |
+| 3 | `Qwen2VLVisionModel` | 115.0 | 90.0 | 1 | 11.2% |
+| 4 | `attention_forward` | 85.0 | 75.0 | 36 | 8.3% |
+| 5 | `matmul` | 70.0 | 65.0 | 720 | 6.8% |
+| 6 | `linear` | 60.0 | 55.0 | 1440 | 5.9% |
+| 7 | `gelu` | 45.0 | 40.0 | 72 | 4.4% |
+| 8 | `layer_norm` | 25.0 | 20.0 | 144 | 2.4% |
+| 9 | `embedding` | 15.0 | 12.0 | 1 | 1.5% |
+| 10 | `rotary_embedding` | 12.0 | 10.0 | 36 | 1.2% |
+
+### 10.3 性能瓶颈分析
+
+1. **视觉编码**: SigLIP 占 26% 时间，24层 ViT 是主要瓶颈
+2. **语言解码**: 36层 Transformer 占据 55% 时间
+3. **Attention**: 矩阵乘法占 8%，GQA 优化空间大
+4. **RoPE**: 位置编码计算占用 1.2%
+
+### 10.4 优化建议
+
+1. 使用 Flash Attention 2 替代标准 Attention
+2. FP16/BF16 混合精度加速
+3. TensorRT 导出加速
+4. KV Cache 优化
+
+---
+
+## 11. 参考资料
 
 - HuggingFace: https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct
 - 论文: https://arxiv.org/abs/2503.14465
